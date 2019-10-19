@@ -1,0 +1,21 @@
+create external table if not exists dwd_nshop_customer(
+  customer_id string,
+  customer_gender tinyint,
+  customer_natives string,
+  age_range string
+)
+row format delimited fields terminated by '\t'
+location '/hive/db/nshop2_dwd.db/dwd_nshop_customer'
+
+insert into nshop2_dwd.dwd_nshop_customer
+    select
+        crl.customer_id ,
+        cus.customer_gender,
+        concat_ws('',area.region_province_desc,area.region_city_desc,area.region_code_desc) customer_natives ,
+        age_range(customer_birthday) age_range
+    from nshop2_ods.ods_customer_release crl
+    left join nshop2_dim.dim_pub_customer cus
+    on crl.customer_id =cus.customer_id
+    left join nshop2_dim.dim_pub_area area
+    on crl.area_code=area.region_code 
+;

@@ -1,0 +1,113 @@
+create external table if not exists nshop2_dws.dws_nshop_trade(
+    customer_gender         tinyint,
+    age_range               string ,
+    customer_natives        string ,
+    category_name           string ,
+    supplier_type           tinyint,
+    busi_succ_orders        bigint ,
+    busi_succ_amounts       double ,
+    busi_succ_users         bigint ,
+    busi_succ_products      bigint ,
+    busi_fail_orders        bigint ,
+    busi_fail_amounts       double)
+row format delimited fields terminated by '\t'
+location '/hive/db/nshop2_dws.db/dws_nshop_trade'
+
+insert into nshop2_dws.dws_nshop_trade
+select
+    temp.customer_gender customer_gender,
+    temp.age_range age_range,
+    temp.customer_natives customer_natives,
+    temp.category_name category_name,
+    temp.supplier_type supplier_type,
+    sum(temp.busi_succ_orders) busi_succ_orders,
+    sum(temp.busi_succ_amounts) busi_succ_amounts,
+    sum(temp.busi_succ_users) busi_succ_users,
+    sum(temp.busi_succ_products) busi_succ_products,
+    sum(temp.busi_fail_orders) as busi_fail_orders,
+    sum(temp.busi_fail_amounts) busi_fail_amounts
+from (
+    select
+        tmp.customer_gender customer_gender,
+        tmp.age_range age_range,
+        tmp.customer_natives customer_natives,
+        tmp.category_name category_name,
+        tmp.supplier_type supplier_type,
+        (case when tmp.os_order_status = '成功' then sum(tmp.busi_succ_orders) else 0 end) as busi_succ_orders,
+        (case when tmp.os_order_status = '成功' then sum(tmp.busi_succ_amounts) else 0 end) as busi_succ_amounts,
+        (case when tmp.os_order_status = '成功' then count(1) else 0 end) as busi_succ_users,
+        (case when tmp.os_order_status = '成功' then sum(tmp.busi_succ_products) else 0 end) as busi_succ_products,
+        (case when tmp.os_order_status = '失败' then sum(tmp.busi_fail_orders) else 0 end) as busi_fail_orders,
+        (case when tmp.os_order_status = '失败' then sum(tmp.busi_fail_amounts) else 0 end) as busi_fail_amounts
+    from (
+        select
+            dno.os_order_status os_order_status,
+            dnc.customer_gender customer_gender,
+            dnc.age_range age_range,
+            dnc.customer_natives customer_natives,
+            dnp.category_name category_name,
+            dnp.supplier_type supplier_type,
+            dno.os_order_status order_status,
+            (case when dno.os_order_status = '成功' then count(1) else 0 end) as busi_succ_orders,
+            (case when dno.os_order_status = '成功' then sum(dno.op_pay_amount) else 0 end) as busi_succ_amounts,
+            (case when dno.os_order_status = '成功' then sum(dno.od_product_cnt) else 0 end) as busi_succ_products,
+            (case when dno.os_order_status = '失败' then count(1) else 0 end) as busi_fail_orders,
+            (case when dno.os_order_status = '失败' then sum(dno.op_pay_amount) else 0 end) as busi_fail_amounts
+        from 
+            (
+            select
+                os_order_id,
+                os_customer_id,
+                if(os_order_status!=7,'成功','失败') os_order_status,
+                os_user_areacode,
+                os_pay_type,
+                os_pay_nettype,
+                os_payment_money,
+                os_order_ctime,
+                op_customer_id,
+                op_pay_status,
+                op_pay_amount,
+                op_pay_ctime,
+                od_product_id,
+                od_product_cnt
+            from
+                nshop2_dwd.dwd_nshop_orders
+            where
+                os_order_status=5
+            or
+                os_order_status=6
+            or
+                os_order_status=7
+            ) dno
+        left join 
+             nshop2_dwd.dwd_nshop_customer dnc
+        on
+            dno.os_customer_id = dnc.customer_id
+        left join
+             nshop2_dwd.dwd_nshop_product dnp
+        on
+            dno.od_product_id = dnp.product_code
+        group by
+            dnc.customer_gender,
+            dnc.age_range,
+            dnc.customer_natives,
+            dnp.category_name,
+            dnp.supplier_type,
+            dno.os_order_status,
+            dno.os_customer_id
+            ) tmp
+    group by
+        tmp.customer_gender,
+        tmp.age_range,
+        tmp.customer_natives,
+        tmp.category_name,
+        tmp.supplier_type,
+        tmp.os_order_status 
+        ) temp
+group by
+    temp.customer_gender,
+    temp.age_range,
+    temp.customer_natives,
+    temp.category_name,
+    temp.supplier_type	
+;

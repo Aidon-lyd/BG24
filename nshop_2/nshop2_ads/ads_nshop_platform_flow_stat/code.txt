@@ -1,0 +1,57 @@
+create external table if not exists nshop2_ads.ads_nshop_platform_flow_stat(
+  customer_gender INT  COMMENT '性别：1男 0女',
+  age_range string  COMMENT '年龄段',
+  customer_natives string   COMMENT '所在地区',
+  visit_avg_duration int comment '人均页面访问时长',
+  visit_avg_counts int comment '人均页面访问数'
+) partitioned by (bdp_day string)
+stored as parquet
+location '/data/nshop/ads/operation/ads_nshop_platform_flow_stat/'
+
+CREATE FUNCTION age_range AS 'BirthdyToAgeGroup' USING JAR '/udf/udf2.jar';
+
+set hive.exec.dynamic.partition.mode=nonstrict;
+insert into table nshop2_ads.ads_nshop_platform_flow_stat partition(bdp_day)
+select 
+r1.customer_gender,
+r1.age_range,
+r1.area,
+cast(sum(r1.duration)/count(distinct (r1.customer_id)) as int),
+cast(count(r1.customer_id)/count(distinct (r1.customer_id)) as int),
+r1.dt 
+from
+(select
+t1.user_id customer_id,
+t2.customer_gender customer_gender,
+age_range(t2.customer_birthday) age_range,
+t3.region_code_desc area,
+t1.duration duration,
+t1.bdp_day dt
+from
+nshop2_dwd.dwd_user_action_log_details t1
+left join
+nshop2_dim.dim_pub_customer t2
+on 
+t1.user_id =t2.customer_id 
+left join
+nshop2_dim.dim_pub_area t3
+on
+t1.area_code=t3.region_code
+where t1.duration!='0'
+)
+r1
+group by r1.customer_gender,r1.age_range,r1.area,r1.dt;
+
+
+set mapred.child.java.opts=-Xmx500m;
+set hive.exec.dynamic.partition.mode=nonstrict;
+insert into table qf_lyf.ads_nshop_flowpu_stat partition(bdp_day)
+select
+count(distinct(device_num)) uv,
+count(device_num) pv,
+count(device_num)/count(distinct(device_num)) as pv_avg,
+bdp_day
+from qf_lyf.dwd_nshop_actlog_pdtview
+group by bdp_day 
+;
+

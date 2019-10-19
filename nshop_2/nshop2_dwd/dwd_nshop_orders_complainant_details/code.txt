@@ -1,0 +1,66 @@
+create external table if not exists nshop2_dwd.dwd_nshop_orders_complainant_details(
+    order_id string comment '订单ID',
+    order_status int comment '订单状态：5已收货(完成)|6投诉 7退货',
+    supplier_code string COMMENT '店铺ID',
+    product_code string COMMENT '商品ID',
+    customer_id string comment '用户id',
+    device_type string comment '设备类型',
+    os string comment '手机系统',
+    os_version string comment '手机系统版本',
+    manufacturer string comment '手机制造商',
+    carrier string comment '电信运营商',
+    network_type string comment '网络类型',
+    area_code string comment '地区编码',
+    user_areacode string comment '用户所在地区',
+    consignee_zipcode string comment '收货人地址',
+    pay_type string comment '支付类型：线上支付 10 网上银行 11 微信 12 支付宝 | 线下支付(货到付款) 20 ',
+    product_price DECIMAL(5,1) COMMENT '购买商品单价',
+    weighing_cost DECIMAL(2,1) COMMENT '商品加权价格',
+    district_money DECIMAL(4,1) COMMENT '优惠金额',
+    is_activity int COMMENT '1:参加活动|0：没有参加活动',
+    order_ctime bigint comment '创建时间'
+) 
+partitioned by (bdp_day string)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
+stored as textfile
+location '/data/nshop/dwd/order/dwd_nshop_orders_complainant_details/';
+
+insert into nshop2_dwd.dwd_nshop_orders_complainant_details partition(bdp_day)
+select 
+t1.order_id,
+t1.order_status,
+t6.supplier_code,
+t2.product_id,
+t1.customer_id,
+t3.device_type,
+t3.os,
+t3.os_version,
+t3.manufacturer,
+t3.carrier,
+t3.network_type,
+t3.area_code,
+t1.customer_areacode user_areacode,
+t1.consignee_zipcode,
+t1.pay_type,
+t2.product_price,
+t2.weighing_cost,
+t2.district_money,
+t2.is_activity,
+t1.order_ctime,
+from_unixtime(cast(order_ctime/1000 as int),'yyyyMMdd')
+from 
+nshop2_ods.ods_orders t1 
+join nshop2_ods.ods_order_detail t2 
+on t1.order_id=t2.order_id
+join nshop2_ods.ods_user_action_log t3
+on t1.customer_id=t3.customer_id
+join (
+select 
+t5.order_id  order_id,
+t4.supplier_code supplier_code
+from 
+nshop2_ods.ods_order_detail t5
+join nshop2_dim.dim_pub_product t4
+on t5.product_id=t4.product_code ) t6
+on t1.order_id=t6.order_id
+;

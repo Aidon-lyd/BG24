@@ -1,0 +1,30 @@
+create external table if not exists nshop2_ads.ads_nshop_actlog_launch_rollup(
+  os string comment '手机系统',
+  manufacturer string comment '手机制造商',
+  carrier string comment '电信运营商',
+  network_type string comment '网络类型',
+  area_code string comment '地区编码',
+  user_count int comment '用户数',
+  launch_count int comment '启动次数'
+) partitioned by (bdp_day string) stored as parquet location '/data/nshop/ads/actlog/ads_nshop_actlog_launch_rollup/';
+
+insert
+  overwrite table nshop2_ads.ads_nshop_actlog_launch_rollup partition(bdp_day)
+select
+  a.os,
+  a.manufacturer,
+  a.carrier,
+  a.network_type,
+  a.area_code,
+  count(distinct a.user_id),
+  sum(a.launch_count),
+  a.bdp_day
+from
+  nshop2_dws.dws_nshop_user_action_log a
+group by
+  a.bdp_day,
+  a.os,
+  a.manufacturer,
+  a.carrier,
+  a.network_type,
+  a.area_code with rollup;

@@ -1,0 +1,46 @@
+create external table if not exists nshop2_dwd.dwd_nshop_orders(
+  os_order_id string,
+  os_customer_id string,
+  os_order_status tinyint,
+  os_user_areacode string,
+  os_pay_type string,
+  os_pay_nettype string,
+  os_payment_money double ,
+  os_order_ctime string ,
+  op_customer_id string ,
+  op_pay_status string ,
+  op_pay_amount bigint,
+  op_pay_ctime bigint,
+  od_product_id  string,
+  od_product_cnt int
+)
+row format delimited fields terminated by '\t'
+location '/hive/db/nshop2_dwd.db/dwd_nshop_orders'
+
+insert into nshop2_dwd.dwd_nshop_orders
+    select
+        os.order_id os_order_id,
+        os.customer_id os_customer_id,
+        os.order_status os_order_status,
+        os.customer_areacode os_user_areacode,
+        os.pay_type os_pay_type,
+        os.pay_nettype os_pay_nettype,
+        os.payment_money  os_payment_money,
+        os.order_ctime os_order_ctime,
+        op.customer_id op_customer_id,
+        op.pay_status op_pay_status,
+        op.pay_amount op_pay_amount,
+        op.pay_ctime op_pay_ctime,
+        od.product_id od_product_id,
+        od.product_cnt od_product_cnt
+    from 
+        nshop2_ods.ods_orders os
+    left join
+        nshop2_ods.ods_order_detail od
+    on
+        os.order_id = od.order_id
+    left join
+        nshop2_ods.ods_orders_pay_records op
+    on
+        os.order_id = op.order_id
+    ;

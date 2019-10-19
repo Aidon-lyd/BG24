@@ -1,0 +1,31 @@
+create external table if not exists nshop2_dws.dws_nshop_user_action_log(
+  user_id string comment '用户id',
+  os string comment '手机系统',
+  os_version string comment '手机系统版本',
+  manufacturer string comment '手机制造商',
+  carrier string comment '电信运营商',
+  network_type string comment '网络类型',
+  area_code string comment '地区编码',
+  launch_count int comment '启动次数'
+) partitioned by (bdp_day string) stored as parquet location '/data/nshop/dws/user/dws_nshop_user_action_log/';
+
+set
+  hive.exec.dynamic.partition.mode = nonstrict;
+
+insert
+  overwrite table nshop2_dws.dws_nshop_user_action_log partition(bdp_day)
+select
+  a.user_id,
+  a.os,
+  a.os_version,
+  a.manufacturer,
+  a.carrier,
+  a.network_type,
+  a.area_code,
+  case
+    when a.action > 4 then 1
+    else 0
+  end,
+  a.bdp_day bdp_day
+from
+  nshop2_dwd.dwd_nshop_actlog_launch a;

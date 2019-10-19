@@ -1,0 +1,18 @@
+create external table if not exists nshop2_dwd.dwd_nshop_product(
+product_code varchar(20),
+category_name varchar(10),
+supplier_type tinyint)
+row format delimited fields terminated by '\t'
+location '/hive/db/nshop2_dwd.db/dwd_nshop_product'
+
+insert into nshop2_dwd.dwd_nshop_product
+    select
+    pro.product_code,
+    cat.category_name,
+    sup.supplier_type
+    from nshop2_dim.dim_pub_product pro
+    left join nshop2_dim.dim_pub_category cat
+    on pro.category_code=cat.category_code
+    left join nshop2_dim.dim_pub_supplier sup
+    on pro.supplier_code=sup.supplier_code
+    ;

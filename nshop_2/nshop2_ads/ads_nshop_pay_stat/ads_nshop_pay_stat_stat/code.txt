@@ -1,0 +1,44 @@
+create  external table if not exists nshop2_ads.ads_nshop_pay_stat(
+customer_gender         tinyint,
+age_range               string ,
+customer_natives        string ,
+category_name           string ,
+supplier_type           tinyint,
+pay_status              string ,
+pay_type                string ,
+pay_nettype             string ,
+pay_amounts             double ,
+pay_failed_cnt          bigint ,
+pay_succeed_cnt         bigint ,
+pay_order_counts        bigint ,
+usr_pay_counts          bigint ,
+pay_product_counts      bigint ,
+order_pay_amount_rate   double ,
+order_pay_user_rate     double ,
+order_pay_durations_average     double)
+row format delimited fields terminated by '\t'
+location '/hive/db/nshop2_ads.db/ads_nshop_pay_stat'
+
+insert into nshop2_ads.ads_nshop_pay_stat
+
+select
+    customer_gender,
+    age_range,
+    customer_natives,
+    category_name,
+    supplier_type,
+    pay_status,
+    pay_type,
+    pay_nettype,
+    pay_amounts,
+    pay_failed_cnt,
+    pay_succeed_cnt,
+    pay_order_counts,
+    usr_pay_counts,
+    pay_product_counts,
+    order_pay_amount_rate,
+    order_pay_user_rate,
+    order_pay_durations_average
+from
+    nshop2_dws.dws_nshop_pay
+;

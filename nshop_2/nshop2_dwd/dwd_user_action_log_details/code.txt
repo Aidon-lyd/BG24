@@ -1,0 +1,48 @@
+create external table if not exists nshop2_dwd.dwd_user_action_log_details(
+  action string comment '行为类型:install安装|launch启动|interactive交互|page_enter_h5页面曝光|page_enter_native页面进入|exit退出',
+  event_type string comment '行为类型:click点击|view浏览|slide滑动|input输入',
+  user_id string comment '用户id',
+  device_num string comment '设备号',
+  device_type string comment '设备类型',
+  os string comment '手机系统',
+  os_version string comment '手机系统版本',
+  manufacturer string comment '手机制造商',
+  carrier string comment '电信运营商',
+  network_type string comment '网络类型',
+  area_code string comment '地区编码',
+  target_id string comment '产品id',
+  target_ids Array<string> comment '产品IDs',
+  target_keys string comment '搜索关键字id',
+  target_order string comment '搜索排序',
+  terget_type string comment'搜索类型', 
+  duration string comment '停留时长',
+  ct bigint comment '产生时间'
+) partitioned by (bdp_day string)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
+stored as textfile
+location '/data/nshop/dwd/dwd_user_action_log_details'
+;
+
+insert into nshop2_dwd.dwd_user_action_log_details partition(bdp_day)
+  select 
+  action,
+  event_type ,
+  customer_id  ,
+  device_num  ,
+  device_type  ,
+  os   ,
+  os_version  ,
+  manufacturer  ,
+  carrier  ,
+  network_type  ,
+  area_code  ,
+  get_json_object(extinfo, '$.target_id')  ,
+  split(get_json_object(extinfo, '$.target_ids'),','),
+  get_json_object(extinfo, '$.target_keys'),
+  get_json_object(extinfo, '$.target_order')  ,
+  get_json_object(extinfo, '$.target_type')  ,
+  duration ,
+  ct,
+  dt as bdp_day
+  from nshop2_ods.ods_user_action_log
+  ;

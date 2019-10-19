@@ -1,0 +1,38 @@
+create external table if not exists nshop2_dwd.dwd_nshop_releasedatas(
+  	device_num string,
+  	device_type string,
+  	os string,
+  	os_version string,
+  	manufacturer string,
+  	area_code string,
+  	release_sid string,
+  	release_session string,
+  	release_sources string,
+    release_category string,
+    release_product string,
+  	release_product_page string,
+  	ct bigint
+) partitioned by (bdp_day string)
+stored as parquet
+location '/data/nshop/dwd/release/dwd_nshop_releasedatas/'
+
+insert into nshop2_dwd.dwd_nshop_releasedatas
+partition(bdp_day='2019-10-04')
+SELECT
+a.device_num device_num,
+a.device_type device_type,
+a.os os,
+a.os_version os_version,
+a.manufacturer manufacturer,
+a.area_code area_code,
+a.release_sid release_sid,
+a.release_session release_session,
+a.release_sources release_sources,
+c.category_name release_category,
+b.product_name release_product,
+substr(release_params,locate("productPage=",release_params)+12) release_product_page,
+a.ct
+FROM nshop2_ods.ods_customer_release a 
+LEFT JOIN nshop2_ods.ods_product b on substr(substr(release_params,locate("productPage=",release_params)+12),0,11)=b.product_code
+LEFT JOIN nshop2_ods.ods_category c on c.category_code=b.category_code 
+WHERE a.dt='2019-10-04'

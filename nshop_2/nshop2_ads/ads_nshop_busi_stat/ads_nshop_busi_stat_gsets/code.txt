@@ -1,0 +1,44 @@
+create  external table if not exists nshop2_ads.ads_nshop_busi_stat_gsets(
+    customer_gender         tinyint,
+    age_range               string ,
+    customer_natives        string ,
+    category_name           string ,
+    supplier_type           tinyint,
+    busi_succ_orders        bigint ,
+    busi_succ_amounts       double ,
+    busi_succ_users         bigint ,
+    busi_succ_products      bigint ,
+    busi_fail_orders        bigint ,
+    busi_fail_amounts       double )
+row format delimited fields terminated by '\t'
+location '/hive/db/nshop2_ads.db/ads_nshop_busi_stat_gsets'
+
+insert into nshop2_ads.ads_nshop_busi_stat_gsets
+select
+    customer_gender,
+    age_range,
+    customer_natives,
+    category_name,
+    supplier_type,
+    sum(busi_succ_orders) busi_succ_orders,
+    sum(busi_succ_amounts) busi_succ_amounts,
+    sum(busi_succ_users) busi_succ_users,
+    sum(busi_succ_products) busi_succ_products,
+    sum(busi_fail_orders) busi_fail_orders,
+    sum(busi_fail_amounts) busi_fail_amounts
+from
+    nshop2_dws.dws_nshop_trade
+group by 
+    customer_gender,
+    age_range,
+    customer_natives,
+    category_name,
+    supplier_type
+grouping sets(
+    customer_gender,
+    age_range,
+    customer_natives,
+    category_name,
+    supplier_type
+    )
+;

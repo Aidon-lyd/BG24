@@ -1,0 +1,18 @@
+create external table if not exists nshop2_ads.ads_nshop_flowpu_stat(
+  uv bigint comment '独立访客数',
+  pv bigint comment '页面访客数',
+  pv_avg int comment '人均页面访问数'
+) partitioned by (bdp_day string)
+stored as parquet
+location '/data/nshop/ads/operation/ads_nshop_flowpu_stat'
+;
+
+insert into table nshop2_ads.ads_nshop_flowpu_stat partition(bdp_day)
+select
+count(distinct(device_num)) uv,
+count(device_num) pv,
+count(device_num)/count(distinct(device_num)) as pv_avg,
+bdp_day
+from nshop2_dwd.dwd_user_action_log_details
+group by bdp_day 
+;

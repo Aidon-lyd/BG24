@@ -1,0 +1,55 @@
+create external table if not exists nshop2_ads.ads_nshop_search_keys(
+  search_keys string comment '搜索内容',
+  gender string comment '性别',
+  age_range string comment '年龄段',
+  os string comment '手机系统',
+  manufacturer string comment '手机制造商',
+  area_code string comment '地区编码',
+  search_users int comment '此搜索内容用户数',
+  search_records int comment '此搜索内容查询次数',
+  search_category string comment '查询目标分类',
+  search_orders string comment '查询排序',
+  search_targets int comment '查询目标数量'
+) partitioned by (bdp_day string)
+row format delimited fields terminated by '\t'
+location '/data/nshop/ads/ads_nshop_search_keys'
+
+  insert into table nshop2_ads.ads_nshop_search_keys partition(bdp_day)
+  select
+  s.target_keys ,    
+  c.customer_gender ,
+  age_range(c.customer_birthday),
+  os,              
+  manufacturer,    
+  area_code ,      
+  tmp.user_search ,
+  tmp.num_search ,  
+  c2.category_name ,  
+  target_order ,  
+  size(target_ids) ,
+  bdp_day     
+  from
+  nshop2_dwd.dwd_user_action_log_details s
+  left join
+  (
+    select 
+    target_keys,
+    count(user_id) user_search ,
+    sum(1) num_search
+    from 
+    nshop2_dwd.dwd_nshop_actlog_pdtsearch
+    group by
+    target_keys
+  ) tmp
+  on
+  s.target_keys = tmp.target_keys
+  left join
+  nshop2_dim.dim_pub_customer c
+  on
+  c.customer_id = s.user_id
+  left join
+  nshop2_dim.dim_pub_category c2
+  on
+  c2.category_code = s.target_keys
+   where s.target_keys is not null
+

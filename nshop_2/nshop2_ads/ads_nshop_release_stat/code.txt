@@ -1,0 +1,49 @@
+create external table if not exists nshop2_ads.ads_nshop_release_stat(
+device_type string comment '设备类型',
+os string comment '手机系统',
+customer_gender TINYINT comment '性别：1男 0女',
+age_range string comment '年龄段',
+customer_natives string comment '所在地区',
+release_sources string comment '投放渠道',
+release_category string comment '投放浏览产品分类',   
+visit_total_customers int comment '总访客数'，
+visit_total_counts int comment '总访问次数'，
+order_total_counts int comment '总订单数'，
+order_rate float comment '订单转换率'
+) partitioned by (bdp_day string)
+stored as parquet
+location '/data/nshop/ads/operation/ads_nshop_release_stat/'
+
+insert into nshop2_ads.ads_nshop_release_stat
+partition(bdp_day="2019-10-04")
+select 
+    b1.device_num, --'设备类型'
+    b1.os, --'手机系统'
+    (case when b3.customer_gender = 1 then '男' else '女' end), --'性别'
+    age_range(b3.customer_birthday), --'年龄段'
+    b1.area_code, --'地域编码'
+    b1.release_sources, --'投放渠道'
+    b1.release_category, --'投放浏览产品分类'
+    count(distinct b1.customer_id) as visit_total_customers, --'总访客数'
+    count(*) as visit_total_counts, --'总访问次数'
+    sum(case when b2.customer_id is null or b2.ct < b1.ct then 0 else 1 end) order_total_counts, --'总订单数'
+    round(sum(case when b2.customer_id is null or b2.ct < b1.ct then 0 else 1 end)/count(*), 4) order_rate --'订单转换率'
+    b1.bdp_day bdp_day --下单时间
+from nshop2_dwd.dwd_nshop_releasedatas b1 
+left join (
+    select 
+        a1.order_id, --'订单id'
+        a1.customer_id, --'下单用户id'
+        a2.product_id, --'订单商品id'
+        cast(a2.order_detail_ctime/1000 as bigint) as ct --'下单时间'
+    from nshop2_ods.ods_orders a1 
+    left join nshop2_ods.ods_order_detail a2
+    on a1.order_id = a2.order_id
+    where from_unixtime(cast(a1.order_detail_ctime/1000 AS bigint),'yyyy-MM-dd')="2019-10-04" 
+) b2
+on substring(release_product_page, 0, 11) = b2.product_id
+left join nshop2_base.customer b3
+on b1.customer_id = b3.customer_id
+group by b1.device_num, b1.os, b3.customer_gender, age_range(b3.customer_birthday), b1.area_code, b1.release_sources, b1.release_category
+where b1.bdp_day="2019-10-04"
+;

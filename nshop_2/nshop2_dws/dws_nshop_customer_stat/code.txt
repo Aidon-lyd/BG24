@@ -1,0 +1,97 @@
+create external table
+if not exists nshop2_dws.dws_nshop_customer_stat
+(
+      user_id string comment '用户ID',
+      order_num int comment '订单数',
+      customer_gender tinyint comment '性别',
+      age_range string comment '年龄段', 
+      device_type string comment '设备类型',
+      os string comment '手机系统',
+      manufacturer string comment '手机制造商',
+      carrier string comment '电信运营商',
+      network_type string comment '网络类型',
+      area_code string comment '所在地区'
+)partitioned by
+(bdp_day string)
+STORED AS TEXTFILE
+location '/data/nshop/dws/operation/dws_nshop_customer_stat/'
+;
+
+SET hive.exec.dynamic.partition=true;
+SET hive.exec.dynamic.partition.mode=nonstrict;
+INSERT OVERWRITE
+TABLE nshop2_dws.dws_nshop_customer_stat partition (bdp_day)
+select 
+tt.user_id,
+tt.order_num,
+tt.user_gender,
+tt.age_range,
+tt.device_type,
+tt.os,
+tt.manufacturer,
+tt.carrier,
+tt.network_type,
+tt.area_code,
+tt.bdp_day
+ from (
+  select
+  row_number() over(distribute by t1.os_customer_id sort by t1.order_num) rn,
+  t1.os_customer_id user_id,
+  t1.order_num order_num,
+  dpc.customer_gender user_gender,
+  (CASE
+WHEN year(current_date)-substr(dpc.customer_birthday,0,4)+IF(month(current_date)-substr(dpc.customer_birthday,4,2) > 0,1,IF(day(current_date)-substr(dpc.customer_birthday,6,2)>0,1,0)) < 21 THEN '0-20'
+WHEN year(current_date)-substr(dpc.customer_birthday,0,4)+IF(month(current_date)-substr(dpc.customer_birthday,4,2) > 0,1,IF(day(current_date)-substr(dpc.customer_birthday,6,2)>0,1,0)) > 20 AND year(current_date)-substr(dpc.customer_birthday,0,4)+IF(month(current_date)-substr(dpc.customer_birthday,4,2) > 0,1,IF(day(current_date)-substr(dpc.customer_birthday,6,2)>0,1,0)) < 24 THEN '21-23'
+WHEN year(current_date)-substr(dpc.customer_birthday,0,4)+IF(month(current_date)-substr(dpc.customer_birthday,4,2) > 0,1,IF(day(current_date)-substr(dpc.customer_birthday,6,2)>0,1,0)) > 23 AND year(current_date)-substr(dpc.customer_birthday,0,4)+IF(month(current_date)-substr(dpc.customer_birthday,4,2) > 0,1,IF(day(current_date)-substr(dpc.customer_birthday,6,2)>0,1,0)) < 27 THEN '24-26'
+WHEN year(current_date)-substr(dpc.customer_birthday,0,4)+IF(month(current_date)-substr(dpc.customer_birthday,4,2) > 0,1,IF(day(current_date)-substr(dpc.customer_birthday,6,2)>0,1,0)) > 26 AND year(current_date)-substr(dpc.customer_birthday,0,4)+IF(month(current_date)-substr(dpc.customer_birthday,4,2) > 0,1,IF(day(current_date)-substr(dpc.customer_birthday,6,2)>0,1,0)) < 29 THEN '27-28'
+WHEN year(current_date)-substr(dpc.customer_birthday,0,4)+IF(month(current_date)-substr(dpc.customer_birthday,4,2) > 0,1,IF(day(current_date)-substr(dpc.customer_birthday,6,2)>0,1,0)) > 28 AND year(current_date)-substr(dpc.customer_birthday,0,4)+IF(month(current_date)-substr(dpc.customer_birthday,4,2) > 0,1,IF(day(current_date)-substr(dpc.customer_birthday,6,2)>0,1,0)) < 31 THEN '29-30'
+WHEN year(current_date)-substr(dpc.customer_birthday,0,4)+IF(month(current_date)-substr(dpc.customer_birthday,4,2) > 0,1,IF(day(current_date)-substr(dpc.customer_birthday,6,2)>0,1,0)) > 29 AND year(current_date)-substr(dpc.customer_birthday,0,4)+IF(month(current_date)-substr(dpc.customer_birthday,4,2) > 0,1,IF(day(current_date)-substr(dpc.customer_birthday,6,2)>0,1,0)) < 33 THEN '30-32'
+WHEN year(current_date)-substr(dpc.customer_birthday,0,4)+IF(month(current_date)-substr(dpc.customer_birthday,4,2) > 0,1,IF(day(current_date)-substr(dpc.customer_birthday,6,2)>0,1,0)) > 32 AND year(current_date)-substr(dpc.customer_birthday,0,4)+IF(month(current_date)-substr(dpc.customer_birthday,4,2) > 0,1,IF(day(current_date)-substr(dpc.customer_birthday,6,2)>0,1,0)) < 36 THEN '33-35'
+WHEN year(current_date)-substr(dpc.customer_birthday,0,4)+IF(month(current_date)-substr(dpc.customer_birthday,4,2) > 0,1,IF(day(current_date)-substr(dpc.customer_birthday,6,2)>0,1,0)) > 35 AND year(current_date)-substr(dpc.customer_birthday,0,4)+IF(month(current_date)-substr(dpc.customer_birthday,4,2) > 0,1,IF(day(current_date)-substr(dpc.customer_birthday,6,2)>0,1,0)) < 39 THEN '36-38'
+WHEN year(current_date)-substr(dpc.customer_birthday,0,4)+IF(month(current_date)-substr(dpc.customer_birthday,4,2) > 0,1,IF(day(current_date)-substr(dpc.customer_birthday,6,2)>0,1,0)) > 38 AND year(current_date)-substr(dpc.customer_birthday,0,4)+IF(month(current_date)-substr(dpc.customer_birthday,4,2) > 0,1,IF(day(current_date)-substr(dpc.customer_birthday,6,2)>0,1,0)) < 43 THEN '39-42'
+WHEN year(current_date)-substr(dpc.customer_birthday,0,4)+IF(month(current_date)-substr(dpc.customer_birthday,4,2) > 0,1,IF(day(current_date)-substr(dpc.customer_birthday,6,2)>0,1,0)) > 42 AND year(current_date)-substr(dpc.customer_birthday,0,4)+IF(month(current_date)-substr(dpc.customer_birthday,4,2) > 0,1,IF(day(current_date)-substr(dpc.customer_birthday,6,2)>0,1,0)) < 47 THEN '43-46'
+WHEN year(current_date)-substr(dpc.customer_birthday,0,4)+IF(month(current_date)-substr(dpc.customer_birthday,4,2) > 0,1,IF(day(current_date)-substr(dpc.customer_birthday,6,2)>0,1,0)) > 46 AND year(current_date)-substr(dpc.customer_birthday,0,4)+IF(month(current_date)-substr(dpc.customer_birthday,4,2) > 0,1,IF(day(current_date)-substr(dpc.customer_birthday,6,2)>0,1,0)) < 57 THEN '47-56'
+WHEN year(current_date)-substr(dpc.customer_birthday,0,4)+IF(month(current_date)-substr(dpc.customer_birthday,4,2) > 0,1,IF(day(current_date)-substr(dpc.customer_birthday,6,2)>0,1,0)) > 56 AND year(current_date)-substr(dpc.customer_birthday,0,4)+IF(month(current_date)-substr(dpc.customer_birthday,4,2) > 0,1,IF(day(current_date)-substr(dpc.customer_birthday,6,2)>0,1,0)) < 67 THEN '57-66'
+ELSE '66+'
+END) AS age_range,
+  dnal.device_type,
+  dnal.os,
+  dnal.manufacturer,
+  dnal.carrier,
+  dnal.network_type,
+  dnal.area_code,
+  dnal.bdp_day
+from (
+  select os_customer_id,
+    count(os_order_id) order_num
+  from nshop2_dwd.dwd_nshop_orders dno
+  where from_unixtime(cast(cast(os_order_ctime as bigint)/1000 as bigint),'yyyy-MM-dd')='2019-10-05'
+  group by os_customer_id
+) t1
+  LEFT JOIN (
+    select 
+    user_id,
+    device_type,
+    os,
+    manufacturer,
+    carrier,
+    network_type,
+    area_code,
+    bdp_day
+    from nshop2_dwd.dwd_nshop_actlog_launch
+    where bdp_day='2019-10-05' 
+  ) dnal
+  ON dnal.user_id=t1.os_customer_id
+  LEFT JOIN (
+    select 
+    rank() over(distribute by customer_id sort by customer_birthday) rn,
+    customer_id, 
+    customer_gender, 
+    customer_birthday 
+    from nshop2_dim.dim_pub_customer
+  ) dpc
+  ON t1.os_customer_id=dpc.customer_id
+) tt
+where tt.rn=1
+;
+

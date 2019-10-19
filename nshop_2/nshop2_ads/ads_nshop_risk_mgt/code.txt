@@ -1,0 +1,43 @@
+create external table if not exists nshop2_ads.ads_nshop_risk_mgt(
+  customer_gender TINYINT COMMENT '性别：1男 0女',
+  age_range string COMMENT '年龄段',
+  customer_natives string COMMENT '所在地区',
+  product_type int comment '商品类别',
+  start_complaint_counts int comment '发起投诉数',
+  cancel_complaint_counts int comment '撤销投诉数',
+  complaint_rate DECIMAL(8,8) comment '投诉率'
+)
+partitioned by (bdp_day string) 
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
+stored as textfile
+location '/data/nshop/ads/operation/ads_nshop_risk_mgt/';
+
+set hive.exec.dynamic.partition.mode=nonstric;
+insert overwrite  table nshop2_ads.ads_nshop_risk_mgt partition(bdp_day)
+select 
+customer_gender,
+age_range,
+customer_natives,
+product_type,
+count(user_id),
+0,
+cast(count(user_id)/ss as decimal(8,8)),
+from_unixtime(cast(ct/1000 as int),'yyyyMMdd')
+from 
+(
+select 
+*,
+count(user_id) over() ss
+from 
+nshop2_dws.dws_nshop_user_complainant
+) t1
+group by 
+customer_gender,
+age_range,
+customer_natives,
+product_type,
+order_status,
+ss,
+ct
+having order_status = '6'
+;

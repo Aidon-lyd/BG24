@@ -1,0 +1,39 @@
+create external table if not exists nshop2_dwd.dwd_nshop_actlog_launch(
+  user_id string comment '用户id',
+  action int comment '操作状态',
+  device_num string comment '设备号',
+  device_type string comment '设备类型',
+  os string comment '手机系统',
+  os_version string comment '手机系统版本',
+  manufacturer string comment '手机制造商',
+  carrier string comment '电信运营商',
+  network_type string comment '网络类型',
+  area_code string comment '地区编码',
+  launch_time_segment string comment '启动时间段',
+  ct bigint comment '产生时间'
+) partitioned by (bdp_day string) row format delimited fields terminated by '\t' location '/data/nshop/dw/user/dwd_nshop_actlog_launch/';
+
+set
+  hive.exec.dynamic.partition.mode = nonstrict;
+
+insert
+  overwrite table nshop2_dwd.dwd_nshop_actlog_launch partition (bdp_day)
+select
+  a.customer_id,
+  a.action,
+  a.device_num,
+  a.device_type,
+  a.os,
+  a.os_version,
+  a.manufacturer,
+  a.carrier,
+  a.network_type,
+  a.area_code,
+  a.duration,
+  a.ct,
+  from_unixtime(a.ct, 'yyyy-MM-dd') bdp_day
+from
+  nshop2_ods.ods_user_action_log a
+  left join nshop2_dim.dim_pub_customer b on a.customer_id = b.customer_id
+where
+  b.customer_id is not NULL;

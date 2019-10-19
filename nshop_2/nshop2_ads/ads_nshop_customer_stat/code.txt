@@ -1,0 +1,84 @@
+create external table
+if not exists nshop2_ads.ads_nshop_customer_stat
+(
+        os string comment '手机系统',
+        manufacturer string comment '手机制造商',
+        carrier string comment '电信运营商',
+        network_type string comment '网络类型',
+        customer_gender TINYINT  COMMENT '性别：1男 0女',
+        age_range string  COMMENT '年龄段',
+        customer_natives string COMMENT '所在地区',
+        total_counts int comment '总用户数',
+        add_counts int comment '新增用户数',
+        active_counts int comment '活跃用户数',
+        repeat_purchase float comment '活跃复购率',
+        avg_purchase_counts int comment '用户平均购买次数',
+        retention_rate float comment '用户留存率'
+) partitioned by
+(bdp_day string)
+stored as parquet
+location '/data/nshop/ads/operation/ads_nshop_customer_stat/'
+
+INSERT OVERWRITE 
+TABLE nshop2_ads.ads_nshop_customer_stat partition 
+(bdp_day='2019-10-05') 
+SELECT dws_cus.os 
+, dws_cus.manufacturer 
+, dws_cus.carrier 
+, dws_cus.network_type 
+, (CASE WHEN dws_cus.customer_gender=1 THEN '男' ELSE '女' END) 
+, dws_cus.age_range 
+, t3.area 
+, COUNT(DISTINCT dim_cus.customer_id) 
+, COUNT(CASE WHEN dim_cus.customer_ctime='2019-10-05' THEN 1 END) 
+, COUNT(distinct t4.user_id) 
+, COUNT(DISTINCT t2.user_id) / COUNT(DISTINCT dim_cus.customer_id) 
+, sum(t5.order_num)/COUNT(DISTINCT t5.user_id) 
+, COUNT(CASE WHEN dim_cus.customer_ctime='2019-10-04' AND t4.launch_count>0 THEN 1 END) /COUNT(CASE WHEN dim_cus.customer_ctime='2019-10-04' THEN 1 end) 
+FROM(
+select
+*
+from nshop2_dws.dws_nshop_customer_stat
+where bdp_day='2019-10-05') dws_cus 
+LEFT JOIN nshop2_dim.dim_pub_customer dim_cus 
+ON dws_cus.user_id=dim_cus.customer_id 
+LEFT JOIN ( 
+select 
+user_id,
+launch_count
+from 
+nshop2_dws.dws_nshop_user_action_log dws_log 
+WHERE dws_log.launch_count != 0 
+AND dws_log.bdp_day >= '2019-10-04') t4 
+ON dws_cus.user_id=t4.user_id 
+LEFT JOIN 
+( 
+SELECT dim_area.region_code 
+, concat(dim_area.region_province_desc,dim_area.region_city_desc,dim_area.region_code_desc) area 
+FROM nshop2_dim.dim_pub_area dim_area 
+) t3 
+ON t3.region_code=dws_cus.area_code 
+LEFT JOIN 
+( 
+SELECT t.user_id 
+, t.order_num order_num 
+FROM nshop2_dws.dws_nshop_customer_stat t 
+WHERE t.bdp_day = '2019-10-05' and order_num > 2 
+) t2 
+ON t2.user_id=dws_cus.user_id 
+left join ( 
+select 
+user_id, 
+order_num 
+from 
+nshop2_dws.dws_nshop_customer_stat dws_cus2 
+where bdp_day = '2019-10-05' 
+) t5 
+on t5.user_id = dws_cus.user_id 
+GROUP BY dws_cus.os 
+,dws_cus.manufacturer 
+,dws_cus.carrier 
+,dws_cus.network_type 
+,dws_cus.customer_gender 
+,dws_cus.age_range 
+,t3.area ;

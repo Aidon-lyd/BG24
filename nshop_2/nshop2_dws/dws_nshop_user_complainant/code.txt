@@ -1,0 +1,62 @@
+create external table if not exists nshop2_dws.dws_nshop_user_complainant(
+user_id string comment '用户id',
+order_status string comment '订单状态',
+customer_gender TINYINT COMMENT '性别：1男 0女',
+age_range string COMMENT '年龄段',
+customer_natives string COMMENT '所在地区',
+product_type int comment '商品类别',
+os string comment '手机系统',
+os_version string comment '手机系统版本',
+manufacturer string comment '手机制造商',
+carrier string comment '电信运营商',
+network_type string comment '网络类型',
+area_code string comment '地区编码',
+compl_orders_count int comment '订单数量',
+compl_orders_pay DECIMAL(10,1) comment '订单金额',
+compl_supplier_count int comment '商家数量',
+ct bigint comment '产生时间'
+)
+partitioned by (bdp_day string)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
+stored as textfile
+location '/data/nshop/dws/user/dws_nshop_user_complainant/';
+
+insert into nshop2_dws.dws_nshop_user_complainant partition(bdp_day)
+select
+t1.customer_id,
+t1.order_status,
+t2.customer_gender,
+age_range(t2.customer_birthday) age_range,
+t1.user_areacode customer_natives,
+t3.category_code,
+t1.os,
+t1.os_version,
+t1.manufacturer,
+t1.carrier,
+t1.network_type,
+t1.area_code,
+sum(t1.order_id) compl_orders_count,
+t1.product_price compl_orders_pay,
+sum(t1.supplier_code) compl_supplier_count,
+t1.order_ctime,
+from_unixtime(cast(t1.order_ctime/1000 as int),'yyyyMMdd')
+from nshop2_dwd.dwd_nshop_orders_complainant_details t1
+left join nshop2_dim.dim_pub_customer t2
+on t1.customer_id=t2.customer_id
+left join nshop2_dim.dim_pub_product t3
+on t1.product_code=t3.product_code
+group by
+t1.customer_id,
+order_status,
+t2.customer_gender,
+age_range(t2.customer_birthday),
+t1.user_areacode,
+t3.category_code,
+t1.os,
+t1.os_version,
+t1.manufacturer,
+t1.carrier,
+t1.network_type,
+t1.area_code,
+t1.product_price,
+t1.order_ctime
