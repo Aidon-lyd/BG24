@@ -1,0 +1,60 @@
+create external table if not exists nshop2_dwd.dwd_pub_product_category(
+  product_code string COMMENT '商品ID(分类编码+供应商编码+编号)',
+  product_name string COMMENT '商品名称',
+  product_remark string COMMENT '商品描述',
+  supplier_code string COMMENT '商品的供应商编码', 
+  product_price double  COMMENT '商品销售价格',
+  product_weighing_cost double  COMMENT '商品加权价格',
+  product_publish_status TINYINT COMMENT '上下架状态：0下架 1上架',
+  product_audit_status TINYINT COMMENT '审核状态：0未审核，1已审核',
+  product_bar_code string COMMENT '国条码',
+  product_weight FLOAT COMMENT '商品重量',
+  product_length FLOAT COMMENT '商品长度',
+  product_height FLOAT COMMENT '商品高度',
+  product_width FLOAT COMMENT '商品宽度',
+  product_colors SMALLINT COMMENT '0:白|1:赤|2:红|3:黄|4:绿|5:青|6:蓝|7:紫|8:黑|9:彩色',
+  product_date string COMMENT '生产日期',
+  product_shelf_life INT COMMENT '商品有效期',
+  product_ctime bigint COMMENT '商品录入时间',
+  product_utime bigint COMMENT '最后修改时间',
+  category_code string COMMENT '分类编码',
+  category_name string COMMENT '分类名称',
+  category_parent_id string COMMENT '父分类ID',
+  category_parent_name string COMMENT '父分类名称'
+)
+stored as TEXTFILE;
+
+insert overwrite table nshop2_dwd.dwd_pub_product_category
+select  dpp.product_code ,
+  dpp.product_name ,
+  dpp.product_remark ,
+  dpp.supplier_code , 
+  dpp.product_price ,
+  dpp.product_weighing_cost ,
+  dpp.product_publish_status ,
+  dpp.product_audit_status ,
+  dpp.product_bar_code ,
+  dpp.product_weight ,
+  dpp.product_length ,
+  dpp.product_height ,
+  dpp.product_width ,
+  dpp.product_colors ,
+  dpp.product_date ,
+  dpp.product_shelf_life ,
+  dpp.product_ctime ,
+  dpp.product_utime ,
+  dpc.category_code ,
+  dpc.category_name ,
+  dpc.category_parent_id ,
+  dpc.category_parent_name 
+from dim_nshop.dim_pub_product dpp
+inner join (
+select 
+  a.category_code  ,
+  a.category_name  ,
+  a.category_parent_id ,
+  b.category_name category_parent_name
+  from dim_nshop.dim_pub_category a
+  inner join dim_nshop.dim_pub_category b
+  on a.category_parent_id = b.category_code
+)dpc on  dpp.category_code = dpc.category_code

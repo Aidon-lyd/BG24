@@ -1,0 +1,70 @@
+create external table if not exists nshop2_dwd.dwd_nshop_02_orders(
+  order_id string ,
+  product_code string ,
+  product_cnt int ,
+  product_price double ,
+  district_money double ,
+  customer_id string ,
+  order_status TINYINT ,
+  customer_ip string ,
+  user_longitude string ,
+  user_latitude string ,
+  user_areacode string ,
+  consignee_name string ,
+  consignee_mobile string ,
+  consignee_zipcode string ,
+  pay_type string ,
+  pay_code string ,
+  pay_nettype string ,
+  shipping_money double ,
+  order_ctime bigint ,
+  shipping_time bigint ,
+  receive_time bigint ,
+  customer_gender tinyint,
+  customer_birthday string
+)partitioned by (bdp_day string)
+stored as TEXTFILE;
+
+set hive.exec.dynamic.partition.mode=nonstrict;
+insert overwrite table nshop2_dwd.dwd_nshop_02_orders partition(bdp_day)
+select ono.order_id,
+  onod.product_id product_code ,
+  onod.product_cnt ,
+  onod.product_price ,
+  onod.district_money ,
+  ono.customer_id ,
+  ono.order_status ,
+  ono.customer_ip ,
+  ono.user_longitude ,
+  ono.user_latitude ,
+  ono.user_areacode ,
+  ono.consignee_name ,
+  ono.consignee_mobile ,
+  ono.consignee_zipcode ,
+  ono.pay_type ,
+  ono.pay_code ,
+  ono.pay_nettype ,
+  ono.shipping_money ,
+  ono.order_ctime ,
+  ono.shipping_time ,
+  ono.receive_time ,
+  cus.customer_gender,
+  cus.customer_birthday,
+  ono.bdp_day 
+from nshop2_ods.ods_nshop_02_orders ono
+inner join 
+(
+select order_id ,
+  product_id ,
+  product_cnt ,
+  product_price ,
+  district_money
+from nshop2_ods.ods_nshop_02_order_detail 
+) onod on ono.order_id = onod.order_id
+inner join
+(
+select customer_id,
+  customer_gender,
+  customer_birthday
+from nshop2_ods.ods_nshop_02_customer
+) cus on ono.customer_id = cus.customer_id

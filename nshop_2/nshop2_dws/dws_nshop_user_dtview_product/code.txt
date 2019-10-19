@@ -1,0 +1,55 @@
+create external table if not exists nshop2_dws.dws_nshop_user_dtview_product
+(
+  customer_id string ,
+  customer_login string ,
+  customer_nickname string ,
+  customer_name string ,
+  customer_idcard string ,
+  customer_gender tinyint ,
+  customer_birthday string ,
+  age_range string ,
+  customer_natives string ,
+  consignee_zipcode string ,
+  target_id string ,
+  view_pag_cnt int 
+)partitioned by (bdp_day string)
+stored as TEXTFILE;
+
+insert overwrite table nshop2_dws.dws_nshop_user_dtview_product
+partition (bdp_day)
+select dncc.customer_id ,
+dncc.customer_login ,
+dncc.customer_nickname ,
+dncc.customer_name ,
+dncc.customer_idcard ,
+dncc.customer_gender ,
+dncc.customer_birthday,
+dncc.age_range ,
+dncc.customer_natives ,
+dncc.consignee_zipcode ,
+dnap.target_id,
+dnap.view_pag_cnt,
+dnap.bdp_day
+from 
+(select 
+  customer_id ,
+  target_id ,
+  bdp_day ,
+  count(*) view_pag_cnt
+from nshop2_dwd.dwd_nshop_actlog_pdtsearch
+group by customer_id ,target_id ,bdp_day
+)dnap
+inner join (
+  select customer_id ,
+  customer_login ,
+  customer_nickname ,
+  customer_name ,
+  customer_idcard ,
+  customer_gender ,
+  customer_birthday,
+  age_range(customer_birthday) age_range ,
+  customer_natives ,
+  consignee_zipcode
+  from nshop2_dwd.dwd_nshop_02_customer_consignee 
+) dncc
+on dnap.customer_id = dncc.customer_id

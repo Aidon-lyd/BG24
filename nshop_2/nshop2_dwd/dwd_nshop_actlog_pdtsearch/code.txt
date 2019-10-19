@@ -1,0 +1,33 @@
+create external table if not exists nshop2_dwd.dwd_nshop_actlog_pdtsearch
+(
+customer_id string comment '用户id',
+device_num string comment '设备号',
+device_type string comment '设备类型',
+os string comment '手机系统',
+os_version string comment '手机系统版本',
+manufacturer string comment '手机制造商',
+carrier string comment '电信运营商',
+network_type string comment '网络类型',
+area_code string comment '地区编码',
+target_id string comment '产品ID',
+ct bigint comment '产生时间'
+) partitioned by (bdp_day string)
+stored as TEXTFILE;
+
+insert overwrite table nshop2_dwd.dwd_nshop_actlog_pdtsearch
+partition(bdp_day)
+select
+customer_id ,
+device_num,
+device_type,
+os,
+os_version,
+manufacturer,
+carrier,
+network_type,
+area_code,
+get_json_object(extinfo,'$.target_id') target_id,
+ct,
+dt
+from nshop2_ods.ods_user_action_log
+where action='07' or action='08'

@@ -1,0 +1,45 @@
+create external table if not exists nshop2_ads.ads_nshop_oper_stat(
+ customer_gender TINYINT NOT NULL COMMENT '性别：1男 0女',
+  age_range varchar(10) NOT NULL COMMENT '年龄段',
+  customer_natives varchar(10)  NULL COMMENT '所在地区',
+  consignee_zipcode varchar(10) NOT NULL COMMENT '收货人地区'
+  product_type int comment '商品类别',
+  order_counts int comment '订单数',
+  order_rate int comment '下单率',
+  order_amounts int comment '销售总金额',
+  order_discounts int comment '优惠总金额',
+  shipping_amounts int comment '运费总金额',
+  per_customer_transaction int comment '客单价'
+) partitioned by (bdp_day string)
+stored as parquet
+
+insert overwrite table nshop2_ads.ads_nshop_oper_stat
+select customer_gender,
+age_range,
+customer_natives,
+consignee_zipcode,
+product_type,
+sum(order_cnt) order_counts,
+sum(order_cnt)/sum(view_pag_cnt) order_rate,
+sum(product_price_cnt) order_amounts,
+sum(district_money_cnt) order_discounts,
+sum(shipping_money_cnt) shipping_amounts,
+sum(product_price_cnt)/count(*) per_customer_transaction,
+bdp_day
+from (
+select 
+upc.customer_gender,
+upc.age_range,
+udp.customer_natives,
+udp.consignee_zipcode,
+udp.view_pag_cnt,
+upc.category_code product_type,
+upc.order_cnt,
+upc.product_price_cnt,
+upc.district_money_cnt,
+upc.shipping_money_cnt,
+udp.bdp_day
+from nshop2_dws.dws_nshop_user_dtview_product udp
+inner join nshop2_dws.dws_nshop_user_product_category upc
+on substr(udp.target_id,1,11) = upc.product_code 
+) u group by customer_gender,age_range,customer_natives,consignee_zipcode,product_type,bdp_day 

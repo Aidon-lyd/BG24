@@ -1,0 +1,41 @@
+CREATE external TABLE `nshop2_dwd.dwd_nshop_02_customer_consignee`(
+  `customer_id` string ,
+  `customer_login` string ,
+  `customer_nickname` string ,
+  `customer_name` string ,
+  `customer_pass` string ,
+  `customer_mobile` string ,
+  `customer_idcard` string ,
+  `customer_gender` tinyint ,
+  `customer_birthday` string ,
+  `customer_email` string ,
+  `customer_natives` string ,
+  `consignee_zipcode` string ,
+  `customer_ctime` bigint ,
+  `customer_utime` bigint 
+)
+stored as TEXTFILE;
+
+insert overwrite table nshop2_dwd.dwd_nshop_02_customer_consignee
+select 
+  cus.customer_id  ,
+  cus.customer_login  ,
+  cus.customer_nickname  ,
+  cus.customer_name  ,
+  cus.customer_pass  ,
+  cus.customer_mobile  ,
+  cus.customer_idcard  ,
+  cus.customer_gender  ,
+  cus.customer_birthday  ,
+  cus.customer_email  ,
+  cus.customer_natives ,
+  con.consignee_zipcode  ,
+  cus.customer_ctime  ,
+  cus.customer_utime  
+from nshop2_ods.ods_nshop_02_customer cus
+inner join 
+(select customer_id,consignee_zipcode
+from 
+nshop2_ods.ods_nshop_02_customer_consignee group by customer_id,consignee_zipcode
+)con
+on cus.customer_id = con.customer_id

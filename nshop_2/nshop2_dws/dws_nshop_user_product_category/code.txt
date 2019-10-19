@@ -1,0 +1,49 @@
+create external table if not exists nshop2_dws.dws_nshop_user_product_category(
+  customer_id string COMMENT '用户ID',
+  customer_gender tinyint COMMENT '性别',
+  age_range string COMMENT '年龄区间',
+  product_code string COMMENT '商品ID',
+  category_code string COMMENT '分类编码',
+  category_name string COMMENT '分类名称',
+  category_parent_id string COMMENT '父分类ID',
+  category_parent_name string COMMENT '父分类名称',
+  order_cnt int COMMENT '订单数量',
+  product_cnt int COMMENT '商品数量',
+  product_price_cnt double COMMENT '商品总价',
+  district_money_cnt double COMMENT '优惠总价',
+  shipping_money_cnt double COMMENT '运费总价'
+)partitioned by (bdp_day string)
+stored as TEXTFILE;
+
+insert overwrite table nshop2_dws.dws_nshop_user_product_category
+partition(bdp_day)
+select
+  dno.customer_id,
+  dno.customer_gender,
+  dno.age_range,
+  dno.product_code,
+  dppc.category_code,
+  dppc.category_name,
+  dppc.category_parent_id,
+  dppc.category_parent_name,
+  dno.order_cnt,
+  dno.product_cnt,
+  dno.product_price_cnt,
+  dno.district_money_cnt,
+  dno.shipping_money_cnt,
+  dno.bdp_day
+from 
+(
+select customer_id,
+  customer_gender,
+  age_range(customer_birthday) age_range,
+  product_code,
+  bdp_day,
+  count(distinct order_id) order_cnt,
+  sum(product_cnt) product_cnt,
+  sum(product_price) product_price_cnt,
+  sum(district_money*product_cnt) district_money_cnt,
+  sum(shipping_money) shipping_money_cnt
+from nshop2_dwd.dwd_nshop_02_orders group by customer_id,customer_gender,age_range,product_code,bdp_day
+)dno
+inner join nshop2_dwd.dwd_pub_product_category dppc on dno.product_code = dppc.product_code
